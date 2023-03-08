@@ -2,6 +2,5 @@ pyknp-0.3
 pyknp-0.3.tar.gz
 tweet_extructor
 tweets_open.csv
-get_tweet_dataset.py
 twitterJSA_data.pickle
 tweet_dataset.csv
