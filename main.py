@@ -80,8 +80,10 @@ def get_dataloader(batch_size: int):
     delete_chars = regex.compile(r"\s")
 
     tokenizer = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese")
+    max_length = 512
 
     for i in tqdm(range(len(df)), desc="create data"):
+        if i == 10: break
         text = df.iloc[i]["text"]
         polarity = df.iloc[i]["polarity"]
 
@@ -90,16 +92,16 @@ def get_dataloader(batch_size: int):
         text = text.replace('@', '＠').replace('#', '＃').replace('\"', '\'')
         text = ' '.join([ mrph.midasi for mrph in juman.analysis(text).mrph_list() ])
 
-        encoding = tokenizer(text, return_tensors="pt")
+        encoding = tokenizer(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
         input_ids_list.append(encoding.input_ids)
         attention_mask_list.append(encoding.attention_mask)
         token_type_ids_list.append(encoding.token_type_ids)
         labels.append(polarity)
     
-    input_ids_tensor = torch.concat(input_ids_list)
-    attention_mask_tensor = torch.concat(attention_mask_list)
-    token_type_ids_tensor = torch.concat(token_type_ids_list)
+    input_ids_tensor = torch.cat(input_ids_list)
+    attention_mask_tensor = torch.cat(attention_mask_list)
+    token_type_ids_tensor = torch.cat(token_type_ids_list)
     labels_tensor = torch.from_numpy(np.array(labels))
 
     print(f"input_ids: {input_ids_tensor.size()}, {input_ids_tensor.dtype}")
@@ -155,11 +157,11 @@ def main():
 
     early_stopping = EarlyStopping(verbose=True)
     optimizer = torch.optim.Adam([
-        {"param": model.bert.encoder.layer[-1].parameters(), "lr": 5e-5},
-        {"param": model.bert.pooling.parameters(), "lr": 5e-5},
-        {"param": model.conv1.parameters(), "lr": 1e-3},
-        {"param": model.conv2.parameters(), "lr": 1e-3}
-    ], beta=(0.9, 0.999))
+        {"params": model.bert.encoder.layer[-1].parameters(), "lr": 5e-5},
+        {"params": model.bert.pooler.parameters(), "lr": 1e-3},
+        {"params": model.conv1.parameters(), "lr": 1e-3},
+        {"params": model.conv2.parameters(), "lr": 1e-3}
+    ], betas=(0.9, 0.999))
     criterion = nn.BCEWithLogitsLoss()
 
     for epoch in range(epochs):
