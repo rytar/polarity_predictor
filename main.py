@@ -81,11 +81,9 @@ def get_dataloader(batch_size: int):
 
     tokenizer = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese")
 
-    for i in range(len(df)):
+    for i in tqdm(range(len(df)), desc="create data"):
         text = df.iloc[i]["text"]
-        polarity = df.iloc["polarity"]
-
-        if text == '': continue
+        polarity = df.iloc[i]["polarity"]
 
         text = normalize("NFKC", text)
         text = delete_chars.sub('', text)
@@ -130,6 +128,8 @@ def get_dataloader(batch_size: int):
 
 
 def main():
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
     fix_seed()
 
     model = BERTBasedBinaryClassifier("nlp-waseda/roberta-base-japanese")
@@ -164,7 +164,7 @@ def main():
 
     for epoch in range(epochs):
         bar = tqdm(total = len(train_loader) + len(val_loader))
-        bar.set_description(f"Epochs: {epoch + 1}/{epochs}")
+        bar.set_description(f"Epochs {epoch + 1}/{epochs}")
 
         running_loss = 0.
         running_total = 0
