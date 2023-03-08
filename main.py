@@ -29,7 +29,7 @@ class BERTBasedBinaryClassifier(nn.Module):
         last_hidden_state = bert_outputs['last_hidden_state'].permute(0, 2, 1)
         outputs = F.relu(self.conv1(last_hidden_state))
         outputs = self.conv2(outputs)
-        logits, _ = torch.max(outputs, 2)
+        logits = torch.mean(outputs, 2)
 
         return logits
 
@@ -102,7 +102,7 @@ def get_dataloader(batch_size: int):
     input_ids_tensor = torch.cat(input_ids_list)
     attention_mask_tensor = torch.cat(attention_mask_list)
     token_type_ids_tensor = torch.cat(token_type_ids_list)
-    labels_tensor = torch.from_numpy(np.array(labels))
+    labels_tensor = torch.from_numpy(np.array([labels]).transpose((1, 0)))
 
     print(f"input_ids: {input_ids_tensor.size()}, {input_ids_tensor.dtype}")
     print(f"attention_mask: {attention_mask_tensor.size()}, {attention_mask_tensor.dtype}")
@@ -146,7 +146,7 @@ def main():
         param.requires_glad = True
     
     epochs = 100
-    batch_size = 64
+    batch_size = 16
 
     train_loader, val_loader, test_loader = get_dataloader(batch_size)
 
@@ -188,7 +188,7 @@ def main():
             running_loss += loss.item()
             pred = (torch.sigmoid(outputs) > 0.5).float()
             running_total += labels.size(0)
-            running_correct += (pred == labels).sum()
+            running_correct += (pred == labels).sum().item()
 
             bar.set_postfix(train_loss = running_loss / len(train_loader), train_acc = running_correct / running_total)
             bar.update(1)
@@ -211,7 +211,7 @@ def main():
                 val_loss += loss.item()
                 pred = (torch.sigmoid(outputs) > 0.5).float()
                 val_total += labels.size(0)
-                val_correct += (pred == labels).sum()
+                val_correct += (pred == labels).sum().item()
 
                 bar.set_postfix(train_loss = running_loss / len(val_loader), train_acc = running_correct / running_total, val_loss = val_loss / len(val_loader), val_acc = val_correct / val_total)
                 bar.update(1)
@@ -238,7 +238,7 @@ def main():
             test_loss += loss.item()
             pred = (torch.sigmoid(outputs) > 0.5).float()
             test_total += labels.size(0)
-            test_correct += (pred == labels).sum()
+            test_correct += (pred == labels).sum().item()
     
     print(f"test loss: {test_loss:.2f}")
     print(f"test acc: {test_correct / test_total:.3f}")
