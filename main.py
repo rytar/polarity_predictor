@@ -68,7 +68,7 @@ def fix_seed(seed=0):
     torch.cuda.manual_seed(seed)
 
 def get_dataloader(batch_size: int):
-    df = pd.read_csv("./tweet_dataset.csv")
+    df = pd.read_csv("./tweet_dataset.csv").dropna()
 
     input_ids_list: list[torch.Tensor] = []
     attention_mask_list: list[torch.Tensor] = []
@@ -83,7 +83,6 @@ def get_dataloader(batch_size: int):
     max_length = 512
 
     for i in tqdm(range(len(df)), desc="create data"):
-        if i == 10: break
         text = df.iloc[i]["text"]
         polarity = df.iloc[i]["polarity"]
 
@@ -102,7 +101,7 @@ def get_dataloader(batch_size: int):
     input_ids_tensor = torch.cat(input_ids_list)
     attention_mask_tensor = torch.cat(attention_mask_list)
     token_type_ids_tensor = torch.cat(token_type_ids_list)
-    labels_tensor = torch.from_numpy(np.array([labels]).transpose((1, 0)))
+    labels_tensor = torch.unsqueeze(torch.from_numpy(np.array(labels)), 1)
 
     print(f"input_ids: {input_ids_tensor.size()}, {input_ids_tensor.dtype}")
     print(f"attention_mask: {attention_mask_tensor.size()}, {attention_mask_tensor.dtype}")
