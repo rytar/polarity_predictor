@@ -11,9 +11,16 @@ for tweet in data:
     text = tweet["text"]
     score = tweet["label"][1] - tweet["label"][2]
 
-    if text == '' or score == 0: continue
+    if text == '': continue
 
-    outputs.append([text, 1 if score > 0 else 0])
+    if score > 0:
+        polarity = 1
+    elif score < 0:
+        polarity = 0
+    else:
+        polarity = 0.5
+
+    outputs.append([text, polarity])
 
 df = pd.DataFrame(outputs, columns=columns)
 df.to_csv("./tweet_dataset.csv", index=False)
