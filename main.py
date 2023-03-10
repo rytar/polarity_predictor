@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import TensorDataset, random_split, DataLoader
 
 import numpy as np
@@ -10,28 +9,8 @@ import random
 import regex
 from pyknp import Juman
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoConfig, AutoModel
+from transformers import AutoTokenizer
 from unicodedata import normalize
-
-class BERTBasedBinaryClassifier(nn.Module):
-
-    def __init__(self, model_name: str):
-        super(BERTBasedBinaryClassifier, self).__init__()
-        self.config = AutoConfig.from_pretrained(model_name)
-        self.bert = AutoModel.from_pretrained(model_name)
-
-        self.conv1 = nn.Conv1d(self.config.hidden_size, 256, 2, padding=1)
-        self.conv2 = nn.Conv1d(256, 1, 2, padding=1)
-    
-    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor, token_type_ids: torch.Tensor):
-        bert_outputs = self.bert(input_ids, attention_mask, token_type_ids)
-
-        last_hidden_state = bert_outputs['last_hidden_state'].permute(0, 2, 1)
-        outputs = F.relu(self.conv1(last_hidden_state))
-        outputs = self.conv2(outputs)
-        logits = torch.mean(outputs, 2)
-
-        return logits
 
 class EarlyStopping():
 
@@ -68,7 +47,9 @@ def fix_seed(seed=0):
     torch.cuda.manual_seed(seed)
 
 def get_dataloader(batch_size: int):
-    df = pd.read_csv("./tweet_dataset.csv").dropna()
+    df_tweet = pd.read_csv("./tweet_dataset.csv").dropna()
+    df_amazon = pd.read_csv("./amazon-polarity.csv").dropna()
+    df = pd.concat([ df_tweet, df_amazon ])
 
     with open("./Japanese.txt", 'r') as f:
         stop_words = regex.split(r"\s+", f.read().strip())
@@ -234,7 +215,7 @@ def main():
     
     epochs = 100
     batch_size = 16
-    test_mode = True
+    test_mode = False
 
     train_loader, val_loader, test_loader = get_dataloader(batch_size)
 
