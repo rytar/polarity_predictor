@@ -70,6 +70,9 @@ def fix_seed(seed=0):
 def get_dataloader(batch_size: int):
     df = pd.read_csv("./tweet_dataset.csv").dropna()
 
+    with open("./Japanese.txt", 'r') as f:
+        stop_words = regex.split(r"\s+", f.read().strip())
+
     input_ids_list: list[torch.Tensor] = []
     attention_mask_list: list[torch.Tensor] = []
     token_type_ids_list: list[torch.Tensor] = []
@@ -101,6 +104,8 @@ def get_dataloader(batch_size: int):
                     words.extend(tmp_words)
                     tmp_words = []
                 
+                if mrph.genkei in stop_words: continue
+                
                 words.append(mrph.genkei)
 
         text = ' '.join(words)
@@ -115,7 +120,7 @@ def get_dataloader(batch_size: int):
     input_ids_tensor = torch.cat(input_ids_list)
     attention_mask_tensor = torch.cat(attention_mask_list)
     token_type_ids_tensor = torch.cat(token_type_ids_list)
-    labels_tensor = torch.unsqueeze(torch.from_numpy(np.array(labels)), 1)
+    labels_tensor = torch.unsqueeze(torch.tensor(labels), 1)
 
     print(f"input_ids: {input_ids_tensor.size()}, {input_ids_tensor.dtype}")
     print(f"attention_mask: {attention_mask_tensor.size()}, {attention_mask_tensor.dtype}")
