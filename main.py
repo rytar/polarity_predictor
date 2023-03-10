@@ -90,7 +90,7 @@ def get_dataloader(batch_size: int):
         text = delete_chars.sub('', text)
         text = text.replace('@', '＠').replace('#', '＃').replace('\"', '\'')
         text = regex.sub(r"\d+", '0', text)
-        text = ' '.join([ mrph.genkei for mrph in juman.analysis(text).mrph_list() ])
+        text = ' '.join([ mrph.genkei.casefold() for mrph in juman.analysis(text).mrph_list() ])
 
         encoding = tokenizer(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
