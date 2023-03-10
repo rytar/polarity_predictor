@@ -11,6 +11,7 @@ from pyknp import Juman
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from unicodedata import normalize
+from model_definition import BERTBasedBinaryClassifier
 
 class EarlyStopping():
 
