@@ -89,7 +89,7 @@ def get_dataloader(batch_size: int):
         text = normalize("NFKC", text)
         text = delete_chars.sub('', text)
         text = text.replace('@', '＠').replace('#', '＃').replace('\"', '\'')
-        text = ' '.join([ mrph.midasi for mrph in juman.analysis(text).mrph_list() ])
+        text = ' '.join([ mrph.genkei for mrph in juman.analysis(text).mrph_list() ])
 
         encoding = tokenizer(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
@@ -127,42 +127,7 @@ def get_dataloader(batch_size: int):
 
     return train_loader, val_loader, test_loader
 
-
-def main():
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-    fix_seed()
-
-    model = BERTBasedBinaryClassifier("nlp-waseda/roberta-base-japanese")
-
-    for param in model.bert.parameters():
-        param.requires_glad = False
-
-    for param in model.bert.encoder.layer[-1].parameters():
-        param.requires_glad = True
-
-    for param in model.bert.pooler.parameters():
-        param.requires_glad = True
-    
-    epochs = 100
-    batch_size = 16
-
-    train_loader, val_loader, test_loader = get_dataloader(batch_size)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
-
-    model.to(device)
-
-    early_stopping = EarlyStopping(verbose=True)
-    optimizer = torch.optim.Adam([
-        {"params": model.bert.encoder.layer[-1].parameters(), "lr": 5e-5},
-        {"params": model.bert.pooler.parameters(), "lr": 1e-3},
-        {"params": model.conv1.parameters(), "lr": 1e-3},
-        {"params": model.conv2.parameters(), "lr": 1e-3}
-    ], betas=(0.9, 0.999))
-    criterion = nn.BCEWithLogitsLoss()
-
+def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Module, epochs: int, train_loader: DataLoader, val_loader: DataLoader | None = None, early_stopping: EarlyStopping | None = None):
     for epoch in range(epochs):
         bar = tqdm(total = len(train_loader) + len(val_loader))
         bar.set_description(f"Epochs {epoch + 1}/{epochs}")
@@ -191,6 +156,8 @@ def main():
 
             bar.set_postfix(train_loss = running_loss / len(train_loader), train_acc = running_correct / running_total)
             bar.update(1)
+
+        if val_loader is None: continue
         
         val_loss = 0.
         val_total = 0
@@ -217,9 +184,10 @@ def main():
         
         bar.close()
         
-        if early_stopping(val_loss / len(val_loader)):
+        if early_stopping is not None and early_stopping(val_loss / len(val_loader)):
             break
-    
+
+def test(model: nn.Module, device: torch.device, criterion: nn.Module, test_loader: DataLoader):
     test_loss = 0.
     test_total = 0
     test_correct = 0
@@ -241,6 +209,48 @@ def main():
     
     print(f"test loss: {test_loss:.2f}")
     print(f"test acc: {test_correct / test_total:.3f}")
+
+def main():
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+    fix_seed()
+    
+    epochs = 100
+    batch_size = 16
+    test_mode = True
+
+    train_loader, val_loader, test_loader = get_dataloader(batch_size)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Device: {device}")
+
+    if os.path.exists("./model.pth"):
+        model: BERTBasedBinaryClassifier = torch.load("./model.pth")
+    else:
+        model = BERTBasedBinaryClassifier("nlp-waseda/roberta-base-japanese")
+
+    for param in model.bert.parameters():
+        param.requires_glad = False
+
+    for param in model.bert.encoder.layer[-1].parameters():
+        param.requires_glad = True
+
+    for param in model.bert.pooler.parameters():
+        param.requires_glad = True
+
+    model.to(device)
+
+    early_stopping = EarlyStopping(verbose=True)
+    optimizer = torch.optim.Adam([
+        {"params": model.bert.encoder.layer[-1].parameters(), "lr": 5e-5},
+        {"params": model.bert.pooler.parameters(), "lr": 1e-3},
+        {"params": model.conv1.parameters(), "lr": 1e-3},
+        {"params": model.conv2.parameters(), "lr": 1e-3}
+    ], betas=(0.9, 0.999))
+    criterion = nn.BCEWithLogitsLoss()
+
+    if not test_mode: train(model, device, optimizer, criterion, epochs, train_loader, val_loader, early_stopping)
+    test(model, device, criterion, test_loader)
 
     save_path = "./model.pth"
     print(f"save to {save_path}")
