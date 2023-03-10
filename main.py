@@ -7,11 +7,14 @@ import os
 import pandas as pd
 import random
 import regex
+import warnings
 from pyknp import Juman
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from unicodedata import normalize
 from model_definition import BERTBasedBinaryClassifier
+
+warnings.simplefilter("ignore", UserWarning)
 
 class EarlyStopping():
 
@@ -50,7 +53,8 @@ def fix_seed(seed=0):
 def get_dataloader(batch_size: int):
     df_tweet = pd.read_csv("./tweet_dataset.csv").dropna()
     df_amazon = pd.read_csv("./amazon-polarity.csv").dropna()
-    df = pd.concat([ df_tweet, df_amazon ])
+    df_rt = pd.read_csv("./rt-polarity.csv").dropna()
+    df = pd.concat([ df_tweet, df_amazon, df_rt ])
 
     with open("./Japanese.txt", 'r') as f:
         stop_words = regex.split(r"\s+", f.read().strip())
