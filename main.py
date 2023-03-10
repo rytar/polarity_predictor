@@ -80,7 +80,7 @@ def get_dataloader(batch_size: int):
 
     juman = Juman()
     
-    delete_chars = regex.compile(r"\s")
+    delete_chars = regex.compile(r"\s|" + '|'.join(stop_words))
 
     tokenizer = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese")
     max_length = 512
@@ -103,8 +103,6 @@ def get_dataloader(batch_size: int):
                 if len(tmp_words) != 0:
                     words.extend(tmp_words)
                     tmp_words = []
-                
-                if mrph.genkei in stop_words: continue
                 
                 words.append(mrph.genkei)
 
