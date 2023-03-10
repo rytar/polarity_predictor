@@ -87,10 +87,23 @@ def get_dataloader(batch_size: int):
         polarity = df.iloc[i]["polarity"]
 
         text = normalize("NFKC", text)
+        text = text.casefold()
         text = delete_chars.sub('', text)
         text = text.replace('@', '＠').replace('#', '＃').replace('\"', '\'')
         text = regex.sub(r"\d+", '0', text)
-        text = ' '.join([ mrph.genkei.casefold() for mrph in juman.analysis(text).mrph_list() ])
+        words = []
+        tmp_words = []
+        for mrph in juman.analysis(text).mrph_list():
+            if mrph.hinsi == "未定義語":
+                tmp_words.append(mrph.genkei)
+            else:
+                if len(tmp_words) != 0:
+                    words.extend(tmp_words)
+                    tmp_words = []
+                
+                words.append(mrph.genkei)
+
+        text = ' '.join(words)
 
         encoding = tokenizer(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
