@@ -1,55 +1,38 @@
-# Python環境
-Python 3.10.8
+# Description
+This repository is for training the polarity classification model for Japanese language and for building a simple API server as a docker image that can make predictions with the model.
 
-# Ubuntuで動かすために
-## Pythonバージョンの変更（pyenv）
-### 更新
-```sh
-$ sudo apt update
-$ sudo apt upgrade
+# Test Environment
+- Ubuntu 20.04.5 (LTS)
+- Python 3.10.8
+
+# Dataset in use
+The dataset used and their license information are as follows:
+
+- [Twitter日本語評判分析データセット](https://www.db.info.gifu-u.ac.jp/sentiment_analysis/): CC-BY-ND 4.0
+- [amazon_polarity](https://huggingface.co/datasets/amazon_polarity): Apache License 2.0
+- [Sentence Polarity Dataset v1.0](https://www.kaggle.com/datasets/nltkdata/sentence-polarity): CC-BY 4.0
+
+This repository doesn't include these data.
+If you want to train the model with these datasets, you should place the data as follows:
+
+```
+- data/
+  - tweet_dataset.csv
+  - amazon-polarity.csv
+  - rt-polarity.csv
 ```
 
-### 必要ライブラリのインストール
+# Base Model
+The model is based on the pretrained model "[nlp_waseda/roberta-base-japanese](https://huggingface.co/nlp-waseda/roberta-base-japanese)".
+
+# Training
 ```sh
-$ sudo apt install -y build-essential libffi-dev libssl-dev zlib1g-dev liblzma-dev libbz2-dev libreadline-dev libsqlite3-dev libopencv-dev tk-dev git
+$ pip install -r requirements.txt
+$ python ./src/main.py
 ```
 
-### pyenvパッケージのインストール
+# Building & Running
 ```sh
-$ git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-$ echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-$ echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-$ echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
-$ source ~/.bashrc
-```
-
-### pythonのインストール
-```sh
-$ pyenv install 3.10.8
-$ pyenv global 3.10.8
-```
-
-## juman++, pyknpのインストール
-### juman++
-```sh
-$ wget https://github.com/ku-nlp/jumanpp/releases/download/v2.0.0-rc3/jumanpp-2.0.0-rc3.tar.xz
-$ sudo apt install cmake
-$ tar xJvf jumanpp-2.0.0-rc3.tar.xz
-$ cd jumanpp-2.0.0-rc3/
-$ mkdir bld
-$ cd bld
-$ cmake ..
-$ sudo make install
-```
-
-### pyknp
-```sh
-$ pip install pyknp
-```
-
-## その他必要ライブラリのインストール
-```sh
-$ pip install numpy pandas regex tqdm
-$ pip install transformers sentencepiece protobuf==3.20.*
-$ pip install torch
+$ docker build -t polarity_predictor .
+$ docker run --name polarity_predictor -d -p 5000:5000 polarity_predictor
 ```

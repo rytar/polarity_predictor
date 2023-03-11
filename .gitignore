@@ -1,6 +1,6 @@
-pyknp-0.3
-pyknp-0.3.tar.gz
-tweet_extructor
-tweets_open.csv
-twitterJSA_data.pickle
-tweet_dataset.csv
+__pycache__
+data/*
+!Japanese.txt
+model/*
+*.pem
+!.gitkeep
