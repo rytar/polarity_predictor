@@ -64,7 +64,7 @@ def get_dataloader(batch_size: int):
     token_type_ids_list: list[torch.Tensor] = []
     labels: list[int] = []
 
-    tokenizer = sudachipy.Dictionary().create(mode=sudachipy.Tokenizer.SplitMode.A)
+    tokenizer = sudachipy.Dictionary(dict_type="full").create(mode=sudachipy.Tokenizer.SplitMode.A)
     
     delete_chars = regex.compile(r"\s|" + '|'.join(stop_words))
 
