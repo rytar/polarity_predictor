@@ -169,7 +169,7 @@ def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Modul
                 val_total += labels.size(0)
                 val_correct += (pred == labels).sum().item()
 
-                bar.set_postfix(train_loss = running_loss / len(val_loader), train_acc = running_correct / running_total, val_loss = val_loss / len(val_loader), val_acc = val_correct / val_total)
+                bar.set_postfix(train_loss = running_loss / len(train_loader), train_acc = running_correct / running_total, val_loss = val_loss / len(val_loader), val_acc = val_correct / val_total)
                 bar.update(1)
         
         bar.close()
