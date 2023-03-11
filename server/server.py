@@ -1,5 +1,6 @@
 import __main__
 import logging
+import os
 import regex
 import sudachipy
 import time
@@ -14,8 +15,13 @@ setattr(__main__, "BERTBasedBinaryClassifier", BERTBasedBinaryClassifier)
 
 warnings.simplefilter("ignore", UserWarning)
 
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
+
 app = Flask(__name__)
+
 model = torch.load("./model/model.pth")
+model.to("cpu")
+model.eval()
 
 with open("./data/Japanese.txt", 'r') as f:
     stop_words = regex.split(r"\s+", f.read().strip())
@@ -41,7 +47,8 @@ def encode_as_input(text: str):
 
 def predict(text: str):
     encoding = encode_as_input(text)
-    outputs = torch.squeeze(torch.sigmoid(model(**encoding)))
+    with torch.no_grad():
+        outputs = torch.squeeze(torch.sigmoid(model(**encoding)))
     polarity = "positive" if (outputs > 0.5).item() else "negative"
     confidence = outputs.item() if polarity == "positive" else 1 - outputs.item()
     return polarity, confidence
