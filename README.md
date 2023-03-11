@@ -6,11 +6,11 @@ This repository is for training the polarity classification model for Japanese l
 - Python 3.10.8
 
 # Dataset in use
-The dataset used and their license information are as follows:
+The dataset used are as follows:
 
-- [Twitter日本語評判分析データセット](https://www.db.info.gifu-u.ac.jp/sentiment_analysis/): CC-BY-ND 4.0
-- [amazon_polarity](https://huggingface.co/datasets/amazon_polarity): Apache License 2.0
-- [Sentence Polarity Dataset v1.0](https://www.kaggle.com/datasets/nltkdata/sentence-polarity): CC-BY 4.0
+- [Twitter日本語評判分析データセット](https://www.db.info.gifu-u.ac.jp/sentiment_analysis/)
+- [amazon_polarity](https://huggingface.co/datasets/amazon_polarity)
+- [Sentence Polarity Dataset v1.0](https://www.kaggle.com/datasets/nltkdata/sentence-polarity)
 
 This repository doesn't include these data.
 If you want to train the model with these datasets, you should place the data as follows:
@@ -23,7 +23,7 @@ If you want to train the model with these datasets, you should place the data as
 ```
 
 # Base Model
-The model is based on the pretrained model "[nlp_waseda/roberta-base-japanese](https://huggingface.co/nlp-waseda/roberta-base-japanese)".
+The model is based on the pretrained model [nlp_waseda/roberta-base-japanese](https://huggingface.co/nlp-waseda/roberta-base-japanese).
 
 # Training
 ```sh
