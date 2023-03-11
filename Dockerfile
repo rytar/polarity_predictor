@@ -8,7 +8,7 @@ ADD ./data/Japanese.txt /app/data/
 
 RUN set -x && \
     apt-get update && \
-    apt-get -y install build-essential python-dev && \
+    apt-get -y install build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
