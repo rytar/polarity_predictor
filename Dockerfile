@@ -1,17 +1,20 @@
 FROM python:3.10-slim
 
-RUN apt update && \
-    apt-get -y install build-essential python-dev && \
-    pip install --upgrade pip
-
 WORKDIR /app
 
-ADD ./server/* /app/
+ADD ./server/*.* /app/
 ADD ./model/model.pth /app/model/
 ADD ./data/Japanese.txt /app/data/
 
-RUN pip install -r requirements.txt && \
-    pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
+RUN set -x && \
+    apt-get update && \
+    apt-get -y install build-essential python-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install torch --extra-index-url https://download.pytorch.org/whl/cpu && \
+    pip cache purge
 
 EXPOSE 5000
 
