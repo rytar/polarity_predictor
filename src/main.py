@@ -66,7 +66,7 @@ def get_dataloader(batch_size: int):
 
     tokenizer = sudachipy.Dictionary(dict="full").create(mode=sudachipy.Tokenizer.SplitMode.A)
     
-    delete_chars = regex.compile(r"\s|" + '|'.join(stop_words))
+    delete_chars = regex.compile(r"\s")
 
     encoder = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese")
     max_length = 512
@@ -79,7 +79,7 @@ def get_dataloader(batch_size: int):
         text = text.casefold()
         text = delete_chars.sub('', text)
         text = regex.sub(r"\d+", '0', text)
-        text = ' '.join([ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] ])
+        text = ' '.join([ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] and not m.normalized_form() in stop_words ])
 
         encoding = encoder(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 

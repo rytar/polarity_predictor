@@ -20,7 +20,7 @@ model = torch.load("./model/model.pth")
 with open("./data/Japanese.txt", 'r') as f:
     stop_words = regex.split(r"\s+", f.read().strip())
 
-delete_chars = regex.compile(r"\s|" + '|'.join(stop_words))
+delete_chars = regex.compile(r"\s")
 
 sudachi_dict = sudachipy.Dictionary(dict="full")
 
@@ -28,13 +28,14 @@ encoder = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese")
 max_length = 512
 
 def encode_as_input(text: str):
-    tokenizer = sudachi_dict.create(mode=sudachipy.Tokenizer.SplitMode.A)
+    tokenizer = sudachi_dict.create(mode=sudachipy.SplitMode.A)
 
     text = normalize("NFKC", text)
     text = text.casefold()
     text = delete_chars.sub('', text)
     text = regex.sub(r"\d+", '0', text)
-    text = ' '.join([ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] ])
+    text = ' '.join([ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] and not m.normalized_form() in stop_words ])
+    app.logger.info(f"preprocessed sentence: {text}")
 
     return encoder(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
