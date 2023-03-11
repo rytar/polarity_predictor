@@ -7,8 +7,8 @@ import os
 import pandas as pd
 import random
 import regex
+import sudachipy
 import warnings
-from pyknp import Juman
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from unicodedata import normalize
@@ -64,11 +64,11 @@ def get_dataloader(batch_size: int):
     token_type_ids_list: list[torch.Tensor] = []
     labels: list[int] = []
 
-    juman = Juman()
+    tokenizer = sudachipy.Dictionary().create(mode=sudachipy.Tokenizer.SplitMode.A)
     
     delete_chars = regex.compile(r"\s|" + '|'.join(stop_words))
 
-    tokenizer = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese")
+    encoder = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese")
     max_length = 512
 
     for i in tqdm(range(len(df)), desc="create data"):
@@ -78,23 +78,10 @@ def get_dataloader(batch_size: int):
         text = normalize("NFKC", text)
         text = text.casefold()
         text = delete_chars.sub('', text)
-        text = text.replace('@', '＠').replace('#', '＃').replace('\"', '\'')
         text = regex.sub(r"\d+", '0', text)
-        words = []
-        tmp_words = []
-        for mrph in juman.analysis(text).mrph_list():
-            if mrph.hinsi == "未定義語":
-                tmp_words.append(mrph.genkei)
-            else:
-                if len(tmp_words) != 0:
-                    words.extend(tmp_words)
-                    tmp_words = []
-                
-                words.append(mrph.genkei)
+        text = ' '.join([ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] ])
 
-        text = ' '.join(words)
-
-        encoding = tokenizer(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
+        encoding = encoder(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
         input_ids_list.append(encoding.input_ids)
         attention_mask_list.append(encoding.attention_mask)
@@ -210,11 +197,11 @@ def test(model: nn.Module, device: torch.device, criterion: nn.Module, test_load
             test_total += labels.size(0)
             test_correct += (pred == labels).sum().item()
     
-    print(f"test loss: {test_loss:.2f}")
+    print(f"test loss: {test_loss / len(test_loader):.2f}")
     print(f"test acc: {test_correct / test_total:.3f}")
 
 def main():
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
     fix_seed()
     
@@ -227,10 +214,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
-    if os.path.exists("./model.pth"):
-        model: BERTBasedBinaryClassifier = torch.load("./model.pth")
-    else:
-        model = BERTBasedBinaryClassifier("nlp-waseda/roberta-base-japanese")
+    model = BERTBasedBinaryClassifier("nlp-waseda/roberta-base-japanese")
 
     for param in model.bert.parameters():
         param.requires_glad = False
