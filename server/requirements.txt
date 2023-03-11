@@ -2,9 +2,10 @@ flask
 numpy
 pandas
 protobuf==3.20.*
+regex
 sentencepiece
 sudachidict_full
 sudachipy
-regex
 tqdm
 transformers
+uWSGI

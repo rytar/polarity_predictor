@@ -1,11 +1,12 @@
 FROM python:3.10-slim
 
-RUN pip install --upgrade pip
+RUN apt update && \
+    apt-get -y install build-essential python-dev && \
+    pip install --upgrade pip
 
 WORKDIR /app
 
-ADD ./server/*.py /app/server/
-ADD ./server/requirements.txt /app/
+ADD ./server/* /app/
 ADD ./model/model.pth /app/model/
 ADD ./data/Japanese.txt /app/data/
 
@@ -14,4 +15,4 @@ RUN pip install -r requirements.txt && \
 
 EXPOSE 5000
 
-CMD ["python", "server/server.py"]
+CMD ["uwsgi", "--ini", "app.ini"]
