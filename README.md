@@ -39,7 +39,7 @@ $ docker build -t polarity_predictor .
 $ docker run --name polarity_predictor -d -p 5000:5000 polarity_predictor
 ```
 
-==========
+---
 ## License
 This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
