@@ -1,20 +1,35 @@
+FROM python:3.10 as builder
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get -y install build-essential && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY ./server/*.* /app/
+COPY ./model/model.pth /app/model/
+COPY ./data/Japanese.txt /app/data/
+
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cpu && \
+    pip cache purge
+
 FROM python:3.10-slim
 
 WORKDIR /app
 
-ADD ./server/*.* /app/
-ADD ./model/model.pth /app/model/
-ADD ./data/Japanese.txt /app/data/
+COPY --from=builder /app /app
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 
-RUN set -x && \
-    apt-get update && \
-    apt-get -y install build-essential && \
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get -y install libpq5 libxml2 && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip install --upgrade pip && \
-    pip install -r requirements.txt && \
-    pip install torch --extra-index-url https://download.pytorch.org/whl/cpu && \
-    pip cache purge
+    rm -rf /var/lib/apt/lists/*
 
 EXPOSE 5000
 
