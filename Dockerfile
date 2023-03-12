@@ -10,7 +10,6 @@ RUN apt-get update && \
 
 COPY ./server/*.* /app/
 COPY ./model/model.pth /app/model/
-COPY ./data/Japanese.txt /app/data/
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
