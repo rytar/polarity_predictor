@@ -43,7 +43,7 @@ def encode_as_input(text: str):
         text = ' '.join(tokens)
     else:
         half_len = (max_length - 2) // 2
-        text = ' '.join(tokens[half_len:]) + ' ' + ' '.join(tokens[:half_len])
+        text = ' '.join(tokens[:half_len]) + ' ' + ' '.join(tokens[-half_len:])
 
     app.logger.info(f"preprocessed sentence: {text}")
 

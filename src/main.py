@@ -84,7 +84,7 @@ def get_dataloader(batch_size: int):
             text = ' '.join(tokens)
         else:
             half_len = (max_length - 2) // 2
-            text = ' '.join(tokens[half_len:]) + ' ' + ' '.join(tokens[:half_len])
+            text = ' '.join(tokens[:half_len]) + ' ' + ' '.join(tokens[-half_len:])
 
         encoding = encoder(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
