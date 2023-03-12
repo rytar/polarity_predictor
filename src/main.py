@@ -16,6 +16,8 @@ from model_definition import BERTBasedBinaryClassifier
 
 warnings.simplefilter("ignore", UserWarning)
 
+model_name = "nlp-waseda/roberta-large-japanese-seq512"
+
 class EarlyStopping():
 
     def __init__(self, patience=10, verbose=False):
@@ -68,7 +70,7 @@ def get_dataloader(batch_size: int):
     
     delete_chars = regex.compile(r"\s")
 
-    encoder = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese")
+    encoder = AutoTokenizer.from_pretrained(model_name)
     max_length = 512
 
     for i in tqdm(range(len(df)), desc="create data"):
@@ -79,19 +81,25 @@ def get_dataloader(batch_size: int):
         text = text.casefold()
         text = delete_chars.sub('', text)
         text = regex.sub(r"\d+", '0', text)
-        text = ' '.join([ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] and not m.normalized_form() in stop_words ])
+        tokens = [ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] and not m.normalized_form() in stop_words ]
+
+        if len(tokens) <= max_length - 2:
+            text = ' '.join(tokens)
+        else:
+            harf_len = (max_length - 2) // 2
+            text = ' '.join(tokens[:harf_len]) + ' ' + ' '.join(tokens[-harf_len:])
 
         encoding = encoder(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
-        input_ids_list.append(encoding.input_ids)
-        attention_mask_list.append(encoding.attention_mask)
-        token_type_ids_list.append(encoding.token_type_ids)
+        input_ids_list.append(encoding.input_ids.to(torch.int32))
+        attention_mask_list.append(encoding.attention_mask.to(torch.int32))
+        token_type_ids_list.append(encoding.token_type_ids.to(torch.int32))
         labels.append(polarity)
     
     input_ids_tensor = torch.cat(input_ids_list)
     attention_mask_tensor = torch.cat(attention_mask_list)
     token_type_ids_tensor = torch.cat(token_type_ids_list)
-    labels_tensor = torch.unsqueeze(torch.tensor(labels), 1)
+    labels_tensor = torch.unsqueeze(torch.tensor(labels, dtype=torch.float16), 1)
 
     print(f"input_ids: {input_ids_tensor.size()}, {input_ids_tensor.dtype}")
     print(f"attention_mask: {attention_mask_tensor.size()}, {attention_mask_tensor.dtype}")
@@ -117,9 +125,12 @@ def get_dataloader(batch_size: int):
 
     return train_loader, val_loader, test_loader
 
-def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Module, epochs: int, train_loader: DataLoader, val_loader: DataLoader | None = None, early_stopping: EarlyStopping | None = None):
+def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Module, epochs: int, train_loader: DataLoader, val_loader: DataLoader | None = None, early_stopping: EarlyStopping | None = None, iters_accumulate = 8):
+    train_batches = len(train_loader)
+    val_batches = len(val_loader)
+    
     for epoch in range(epochs):
-        bar = tqdm(total = len(train_loader) + len(val_loader))
+        bar = tqdm(total = train_batches + val_batches)
         bar.set_description(f"Epochs {epoch + 1}/{epochs}")
 
         running_loss = 0.
@@ -127,24 +138,27 @@ def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Modul
         running_correct = 0
 
         model.train()
-        for input_ids, attention_mask, token_type_ids, labels in train_loader:
+        for i, (input_ids, attention_mask, token_type_ids, labels) in enumerate(train_loader):
             input_ids: torch.Tensor = input_ids.to(device)
             attention_mask: torch.Tensor = attention_mask.to(device)
             token_type_ids: torch.Tensor = token_type_ids.to(device)
             labels: torch.Tensor = labels.to(device)
 
-            optimizer.zero_grad()
             outputs: torch.Tensor = model(input_ids, attention_mask, token_type_ids)
             loss: torch.Tensor = criterion(outputs, labels)
+            loss = loss / iters_accumulate
             loss.backward()
-            optimizer.step()
+
+            if (i + 1) % iters_accumulate == 0 or i + 1 == train_batches:
+                optimizer.step()
+                optimizer.zero_grad()
 
             running_loss += loss.item()
             pred = (torch.sigmoid(outputs) > 0.5).float()
             running_total += labels.size(0)
             running_correct += (pred == labels).sum().item()
 
-            bar.set_postfix(train_loss = running_loss / len(train_loader), train_acc = running_correct / running_total)
+            bar.set_postfix(train_loss = running_loss / train_batches, train_acc = running_correct / running_total)
             bar.update(1)
 
         if val_loader is None: continue
@@ -169,12 +183,12 @@ def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Modul
                 val_total += labels.size(0)
                 val_correct += (pred == labels).sum().item()
 
-                bar.set_postfix(train_loss = running_loss / len(train_loader), train_acc = running_correct / running_total, val_loss = val_loss / len(val_loader), val_acc = val_correct / val_total)
+                bar.set_postfix(train_loss = running_loss / train_batches, train_acc = running_correct / running_total, val_loss = val_loss / val_batches, val_acc = val_correct / val_total)
                 bar.update(1)
         
         bar.close()
         
-        if early_stopping is not None and early_stopping(val_loss / len(val_loader)):
+        if early_stopping is not None and early_stopping(val_loss / val_batches):
             break
 
 def test(model: nn.Module, device: torch.device, criterion: nn.Module, test_loader: DataLoader):
@@ -206,7 +220,7 @@ def main():
     fix_seed()
     
     epochs = 100
-    batch_size = 16
+    batch_size = 1
     test_mode = False
 
     train_loader, val_loader, test_loader = get_dataloader(batch_size)
@@ -214,25 +228,22 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
-    model = BERTBasedBinaryClassifier("nlp-waseda/roberta-base-japanese")
+    if test_mode:
+        model: BERTBasedBinaryClassifier = torch.load("./model/model.pth")
+    else:
+        model = BERTBasedBinaryClassifier(model_name)
 
-    for param in model.bert.parameters():
-        param.requires_glad = False
-
-    for param in model.bert.encoder.layer[-1].parameters():
-        param.requires_glad = True
-
-    for param in model.bert.pooler.parameters():
+    for param in model.parameters():
         param.requires_glad = True
 
     model.to(device)
 
     early_stopping = EarlyStopping(verbose=True)
     optimizer = torch.optim.Adam([
-        {"params": model.bert.encoder.layer[-1].parameters(), "lr": 5e-5},
-        {"params": model.bert.pooler.parameters(), "lr": 1e-3},
+        {"params": model.bert.parameters(), "lr": 5e-5},
         {"params": model.conv1.parameters(), "lr": 1e-3},
-        {"params": model.conv2.parameters(), "lr": 1e-3}
+        {"params": model.conv2.parameters(), "lr": 1e-3},
+        {"params": model.fc.parameters(), "lr": 1e-3}
     ], betas=(0.9, 0.999))
     criterion = nn.BCEWithLogitsLoss()
 
