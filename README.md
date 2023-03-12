@@ -7,7 +7,7 @@ This repository is for training the polarity classification model for Japanese l
 You can use the built image from Docker Hub.
 
 ```sh
-$ docker image pull rytaryu/polarity_predictor:latest
+$ docker pull rytaryu/polarity_predictor:latest
 $ docker run --name polarity_predictor -d -p 5000:5000 rytaryu/polarity_predictor:latest
 ```
 
