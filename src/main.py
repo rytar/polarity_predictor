@@ -16,7 +16,7 @@ from model_definition import BERTBasedBinaryClassifier
 
 warnings.simplefilter("ignore", UserWarning)
 
-model_name = "nlp-waseda/roberta-large-japanese-seq512"
+model_name = "nlp-waseda/roberta-base-japanese"
 
 class EarlyStopping():
 
@@ -58,9 +58,6 @@ def get_dataloader(batch_size: int):
     df_rt = pd.read_csv("./data/rt-polarity.csv").dropna()
     df = pd.concat([ df_tweet, df_amazon, df_rt ])
 
-    with open("./data/Japanese.txt", 'r') as f:
-        stop_words = regex.split(r"\s+", f.read().strip())
-
     input_ids_list: list[torch.Tensor] = []
     attention_mask_list: list[torch.Tensor] = []
     token_type_ids_list: list[torch.Tensor] = []
@@ -81,7 +78,7 @@ def get_dataloader(batch_size: int):
         text = text.casefold()
         text = delete_chars.sub('', text)
         text = regex.sub(r"\d+", '0', text)
-        tokens = [ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] and not m.normalized_form() in stop_words ]
+        tokens = [ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] ]
 
         if len(tokens) <= max_length - 2:
             text = ' '.join(tokens)
@@ -220,7 +217,7 @@ def main():
     fix_seed()
     
     epochs = 100
-    batch_size = 1
+    batch_size = 16
     test_mode = False
 
     train_loader, val_loader, test_loader = get_dataloader(batch_size)

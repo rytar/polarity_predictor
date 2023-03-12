@@ -1,6 +1,5 @@
 __pycache__
 data/*
-!Japanese.txt
 model/*
 *.pem
 !.gitkeep
