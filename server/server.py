@@ -37,6 +37,7 @@ def encode_as_input(text: str):
     text = text.casefold()
     text = delete_chars.sub('', text)
     text = regex.sub(r"\d+", '0', text)
+    text = text.replace("nya", "na").replace("にゃ", "な").replace("ニャ", "ナ")
     tokens = [ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] == "補助記号" ]
 
     if len(tokens) <= max_length - 2:
