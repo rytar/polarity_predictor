@@ -58,11 +58,14 @@ def predict(text: str):
     confidence = outputs.item() if polarity == "positive" else 1 - outputs.item()
     return polarity, confidence
 
-@app.route('/', methods=["GET"])
+@app.route('/', methods=["GET", "POST"])
 def root():
     app.logger.setLevel(logging.INFO)
 
-    text = request.args.get("text", '', type=str)
+    if request.method == "GET":
+        text = request.args.get("text", '', type=str)
+    else:
+        text = request.form.get("text", '', type=str)
 
     if text == '':
         return jsonify({"message": "Invalid args: text field is empty."}), 400
