@@ -268,6 +268,7 @@ def main():
     if not test_mode: train(model, device, optimizer, criterion, epochs, train_loader, val_loader, early_stopping)
 
     model: BERTBasedBinaryClassifier = torch.load("./model/model.pth")
+    model.to(device)
     test(model, device, criterion, test_loader)
 
 if __name__ == "__main__":
