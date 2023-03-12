@@ -43,6 +43,8 @@ If you want to train the model with these datasets, you should place the data as
   - rt-polarity.csv
 ```
 
+[amazon_polarity](https://huggingface.co/datasets/amazon_polarity) and [Sentence Polarity Dataset v1.0](https://www.kaggle.com/datasets/nltkdata/sentence-polarity) are English dataset, but I used these as Japanese dataset through DeepL API.
+
 ## Base Model
 The model is based on the pretrained model [nlp_waseda/roberta-base-japanese](https://huggingface.co/nlp-waseda/roberta-base-japanese).
 
