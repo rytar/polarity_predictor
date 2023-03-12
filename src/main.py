@@ -155,7 +155,7 @@ def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Modul
             running_total += labels.size(0)
             running_correct += (pred == labels).sum().item()
 
-            bar.set_postfix(train_loss = running_loss / train_batches, train_acc = running_correct / running_total)
+            bar.set_postfix(train_loss = iters_accumulate * running_loss / train_batches, train_acc = running_correct / running_total)
             bar.update(1)
 
         if val_loader is None: continue
@@ -180,7 +180,7 @@ def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Modul
                 val_total += labels.size(0)
                 val_correct += (pred == labels).sum().item()
 
-                bar.set_postfix(train_loss = running_loss / train_batches, train_acc = running_correct / running_total, val_loss = val_loss / val_batches, val_acc = val_correct / val_total)
+                bar.set_postfix(train_loss = iters_accumulate * running_loss / train_batches, train_acc = running_correct / running_total, val_loss = val_loss / val_batches, val_acc = val_correct / val_total)
                 bar.update(1)
         
         bar.close()
