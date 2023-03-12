@@ -37,13 +37,13 @@ def encode_as_input(text: str):
     text = text.casefold()
     text = delete_chars.sub('', text)
     text = regex.sub(r"\d+", '0', text)
-    tokens = [ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] ]
+    tokens = [ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] == "補助記号" ]
 
     if len(tokens) <= max_length - 2:
         text = ' '.join(tokens)
     else:
-        harf_len = (max_length - 2) // 2
-        text = ' '.join(tokens[:harf_len]) + ' ' + ' '.join(tokens[-harf_len:])
+        half_len = (max_length - 2) // 2
+        text = ' '.join(tokens[half_len:]) + ' ' + ' '.join(tokens[:half_len])
 
     app.logger.info(f"preprocessed sentence: {text}")
 

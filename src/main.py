@@ -36,15 +36,15 @@ class EarlyStopping():
             self.prev_loss = loss
             self.count = 0
 
-            return False
+            return "save"
         
         if self.count > self.patience:
             if self.verbose:
                 print(f"early stopping: {self.epochs} epochs")
             
-            return True
+            return "stop"
 
-        return False
+        return "continue"
 
 def fix_seed(seed=0):
     random.seed(seed)
@@ -68,7 +68,7 @@ def get_dataloader(batch_size: int):
     delete_chars = regex.compile(r"\s")
 
     encoder = AutoTokenizer.from_pretrained(model_name)
-    max_length = 512
+    max_length = 128
 
     for i in tqdm(range(len(df)), desc="create data"):
         text = df.iloc[i]["text"]
@@ -78,13 +78,13 @@ def get_dataloader(batch_size: int):
         text = text.casefold()
         text = delete_chars.sub('', text)
         text = regex.sub(r"\d+", '0', text)
-        tokens = [ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] in ["補助記号", "空白"] ]
+        tokens = [ m.normalized_form() for m in tokenizer.tokenize(text) if not m.part_of_speech()[0] == "補助記号" ]
 
         if len(tokens) <= max_length - 2:
             text = ' '.join(tokens)
         else:
-            harf_len = (max_length - 2) // 2
-            text = ' '.join(tokens[:harf_len]) + ' ' + ' '.join(tokens[-harf_len:])
+            half_len = (max_length - 2) // 2
+            text = ' '.join(tokens[half_len:]) + ' ' + ' '.join(tokens[:half_len])
 
         encoding = encoder(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
@@ -122,7 +122,7 @@ def get_dataloader(batch_size: int):
 
     return train_loader, val_loader, test_loader
 
-def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Module, epochs: int, train_loader: DataLoader, val_loader: DataLoader | None = None, early_stopping: EarlyStopping | None = None, iters_accumulate = 8):
+def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Module, epochs: int, train_loader: DataLoader, val_loader: DataLoader | None = None, early_stopping: EarlyStopping | None = None, iters_accumulate = 2):
     train_batches = len(train_loader)
     val_batches = len(val_loader)
     
@@ -185,8 +185,16 @@ def train(model: nn.Module, device: torch.device, optimizer, criterion: nn.Modul
         
         bar.close()
         
-        if early_stopping is not None and early_stopping(val_loss / val_batches):
-            break
+        if early_stopping is not None:
+            es = early_stopping(val_loss / val_batches)
+            
+            if es == "save":
+                save_path = "./model/model.pth"
+                model.to("cpu")
+                torch.save(model, save_path)
+                model.to(device)
+            elif es == "stop":
+                break
 
 def test(model: nn.Module, device: torch.device, criterion: nn.Module, test_loader: DataLoader):
     test_loss = 0.
@@ -211,13 +219,34 @@ def test(model: nn.Module, device: torch.device, criterion: nn.Module, test_load
     print(f"test loss: {test_loss / len(test_loader):.2f}")
     print(f"test acc: {test_correct / test_total:.3f}")
 
+def get_parameters(model: BERTBasedBinaryClassifier):
+    for param in model.parameters():
+        param.requires_glad = False
+    
+    for param in model.bert.encoder.layer[-7:].parameters():
+        param.requires_glad = True
+
+    for param in model.conv1.parameters():
+        param.requires_grad = True
+
+    for param in model.conv2.parameters():
+        param.requires_grad = True
+    
+    return [
+        {"params": model.bert.encoder.layer[-7:-3].parameters(), "lr": 1.25e-5},
+        {"params": model.bert.encoder.layer[-3:-1].parameters(), "lr": 2.5e-5},
+        {"params": model.bert.encoder.layer[-1].parameters(), "lr": 5e-5},
+        {"params": model.conv1.parameters(), "lr": 1e-3},
+        {"params": model.conv2.parameters(), "lr": 1e-3},
+    ]
+
 def main():
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
     fix_seed()
     
     epochs = 100
-    batch_size = 16
+    batch_size = 96
     test_mode = False
 
     train_loader, val_loader, test_loader = get_dataloader(batch_size)
@@ -230,26 +259,16 @@ def main():
     else:
         model = BERTBasedBinaryClassifier(model_name)
 
-    for param in model.parameters():
-        param.requires_glad = True
-
     model.to(device)
 
     early_stopping = EarlyStopping(verbose=True)
-    optimizer = torch.optim.Adam([
-        {"params": model.bert.parameters(), "lr": 5e-5},
-        {"params": model.conv1.parameters(), "lr": 1e-3},
-        {"params": model.conv2.parameters(), "lr": 1e-3},
-        {"params": model.fc.parameters(), "lr": 1e-3}
-    ], betas=(0.9, 0.999))
+    optimizer = torch.optim.Adam(get_parameters(model), betas=(0.9, 0.999), eps=1e-8)
     criterion = nn.BCEWithLogitsLoss()
 
     if not test_mode: train(model, device, optimizer, criterion, epochs, train_loader, val_loader, early_stopping)
-    test(model, device, criterion, test_loader)
 
-    save_path = "./model/model.pth"
-    print(f"save to {save_path}")
-    torch.save(model.to("cpu"), save_path)
+    model: BERTBasedBinaryClassifier = torch.load("./model/model.pth")
+    test(model, device, criterion, test_loader)
 
 if __name__ == "__main__":
     main()

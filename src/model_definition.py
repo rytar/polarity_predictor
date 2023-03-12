@@ -13,20 +13,17 @@ class BERTBasedBinaryClassifier(nn.Module):
 
         self.conv1 = nn.Conv1d(self.config.hidden_size, 256, 2)
         self.conv2 = nn.Conv1d(256, 1, 2)
-        self.fc = nn.Linear(510, 1)
     
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor, token_type_ids: torch.Tensor):
         bert_outputs = self.bert(input_ids, attention_mask, token_type_ids)
 
-        # (bs, 512, hidden_size)
+        # (bs, 128, hidden_size)
         last_hidden_state = bert_outputs['last_hidden_state'].permute(0, 2, 1)
-        # (bs, hidden_size, 512)
+        # (bs, hidden_size, 128)
         outputs = F.relu(self.conv1(last_hidden_state))
-        # (bs, 256, 511)
-        outputs = F.relu(self.conv2(outputs))
-        # (bs, 1, 510)
-        outputs = torch.squeeze(outputs, 1)
-        # (bs, 510)
-        outputs = self.fc(outputs)
+        # (bs, 256, 127)
+        outputs = self.conv2(outputs)
+        # (bs, 1, 126)
+        outputs = torch.mean(outputs, 2)
         # (bs, 1)
         return outputs
