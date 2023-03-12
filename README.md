@@ -3,6 +3,25 @@
 
 This repository is for training the polarity classification model for Japanese language and for building a simple API server as a docker image that can make predictions with the model.
 
+## Simple Usage
+You can use the built image from Docker Hub.
+
+```sh
+$ docker image pull rytaryu/polarity_predictor:latest
+$ docker run --name polarity_predictor -d -p 5000:5000 rytaryu/polarity_predictor:latest
+```
+
+This server accepts GET and POST requests.  Both of these should be sent with the "text" field specified.
+Because of the character limit in GET, POST is basically recommended.
+
+```sh
+$ curl -X GET "http://localhost:5000/?text=こんにちは、これはGETでリクエストを送信する例です。textとして渡された文字列に対して極性判定を行なった結果を返します。"
+{"confidence":0.5862680077552795,"polarity":"positive"}
+
+$ curl -X POST -d "text=どうも、こちらはPOSTでリクエストを送信する例です。GETでは送信出来る文字数に制限があるため、基本的にはPOSTでの利用をおすすめします。" "http://localhost:5000/"
+{"confidence":0.8755825757980347,"polarity":"negative"}
+```
+
 ## Test Environment
 - Ubuntu 20.04.5 (LTS)
 - Python 3.10.8
