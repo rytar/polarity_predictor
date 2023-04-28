@@ -27,6 +27,7 @@ If you want to use GPU, you should install [NVIDIA Container Toolkit](https://do
 The way to run the container is below.
 
 ```sh
+$ docker pull rytaryu/polarity_predictor_gpu:latest
 $ docker run --gpus all --name polarity_predictor_gpu -d -p 5000:5000 rytaryu/polarity_predictor_gpu:latest
 ```
 
