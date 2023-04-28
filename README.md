@@ -22,6 +22,14 @@ $ curl -X POST -d "text=どうも、こちらはPOSTでリクエストを送信�
 {"confidence":0.8755825757980347,"polarity":"negative"}
 ```
 
+### With GPU
+If you want to use GPU, you should install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker).
+The way to run the container is below.
+
+```sh
+$ docker run --rm --gpus all --name polarity_predictor -d -p 5000:5000 rytaryu/polarity_predictor:latest
+```
+
 ## Test Environment
 - Ubuntu 20.04.5 (LTS)
 - Python 3.10.8
