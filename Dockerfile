@@ -13,7 +13,7 @@ COPY ./model/model.pth /app/model/
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir torch && \
     pip cache purge
 
 FROM python:3.10-slim

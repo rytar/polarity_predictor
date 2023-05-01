@@ -19,8 +19,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 app = Flask(__name__)
 
-model = torch.load("./model/model.pth")
-model.to("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = torch.load("./model/model.pth", map_location=device)
+model.to(device)
 model.eval()
 
 delete_chars = regex.compile(r"\s")
@@ -50,10 +51,18 @@ def encode_as_input(text: str):
 
     return encoder(text, return_tensors="pt", max_length=max_length, padding="max_length", truncation=True)
 
+def to_device(**kwargs):
+    result = {}
+
+    for key, value in kwargs.items():
+        result[key] = value.to(device)
+    
+    return result
+
 def predict(text: str):
     encoding = encode_as_input(text)
     with torch.no_grad():
-        outputs = torch.squeeze(torch.sigmoid(model(**encoding)))
+        outputs = torch.squeeze(torch.sigmoid(model(**to_device(**encoding))))
     polarity = "positive" if (outputs > 0.5).item() else "negative"
     confidence = outputs.item() if polarity == "positive" else 1 - outputs.item()
     return polarity, confidence
